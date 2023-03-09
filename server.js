@@ -1,5 +1,6 @@
 const http = require('http');
 const app = require('./app');
+const {Sequelize, DataTypes} = require("sequelize");
 
 const normalizePort = val => {
   const port = parseInt(val, 10);
@@ -43,5 +44,22 @@ server.on('listening', () => {
   const bind = typeof address === 'string' ? 'pipe ' + address : 'port ' + port;
   console.log('Listening on ' + bind);
 });
+
+const sequelize = new Sequelize(
+ 'cartoon',
+ 'root',
+ 'Universum555-',
+  {
+    host: 'localhost',
+    dialect: 'mysql'
+  }
+);
+
+sequelize.authenticate().then(() => {
+   console.log('Connection has been established successfully.');
+}).catch((error) => {
+   console.error('Unable to connect to the database: ', error);
+});
+
 
 server.listen(port);
