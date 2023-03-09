@@ -22,13 +22,17 @@ app.get("/", (req,res,next) => {
     res.status(200).json(personnages);
 })
 
+app.get('/:personnageName/PersonnageData', (req,res) => {
+    console.log(req.params.personnageName)
+})
+
 app.post("/post", (req, res) => {
     console.log("Connected to React");
     res.redirect("/");
   });
 
 
-app.post('/personnageData', (req, res, next) => {
+app.post('/:personnageName', (req, res, next) => {
     console.log(req.body);
     res.status(201).json(req.body);
   });
