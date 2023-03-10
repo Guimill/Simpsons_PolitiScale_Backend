@@ -13,21 +13,6 @@ app.use((req, res, next) => {
     next();
   });
 
-app.get("/", (req,res,next) => {
-    const personnages = [
-        {
-            _id: 1,
-            name: "Homer",
-            src: './images/homer.jpg'
-        },
-    ];
-    res.status(200).json(personnages);
-})
-
-app.get('/:personnageName/PersonnageData', (req,res) => {
-    console.log(req.params.personnageName)
-})
-
 app.post('/:personnageName', (req, res, next) => {
     const personnageData = {
         name : req.body.name,
@@ -36,9 +21,6 @@ app.post('/:personnageName', (req, res, next) => {
 
     console.log(personnageData);
 
-    db.sync().then(() => {
-        console.log('personnage table created successfully!');
-     
         personnage.create({
             name: personnageData.name,
             vote: personnageData.vote,
@@ -47,14 +29,25 @@ app.post('/:personnageName', (req, res, next) => {
         }).catch((error) => {
             console.error('Failed to create a new record : ', error);
         });
-     
-     }).catch((error) => {
-        console.error('Unable to create table : ', error);
-     });
-     
-    res.status(201).json(req.body);
   });
 
+  app.get('/:personnageName', (req, res) => {
 
+    const name = req.params.personnageName;
+
+       const personnages = personnage.findAll({
+            attributes: ["name", "vote"],
+            where : {
+                name: name
+            }
+        });
+
+        personnages.then(resultat => {
+            console.log(JSON.stringify(resultat))
+            res.status(200).json(JSON.stringify(resultat));
+        }).catch((error) => {
+            console.error('Failed to return the record : ', error);
+        });
+  });
 
 module.exports = app;

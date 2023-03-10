@@ -1,4 +1,4 @@
-const { DataTypes, Sequelize} = require("sequelize");
+const { DataTypes} = require("sequelize");
 const db = require('../config/config')
 
 const personnage = db.define("personnages", {
@@ -12,7 +12,7 @@ const personnage = db.define("personnages", {
     }
  });
 
- db.sync().then(() => {
+db.sync().then(() => {
   console.log('personnage table created successfully!');
 }).catch((error) => {
   console.error('Unable to create personnage : ', error);
