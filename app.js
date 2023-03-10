@@ -43,8 +43,8 @@ app.post('/:personnageName', (req, res, next) => {
         });
 
         personnages.then(resultat => {
-            console.log(JSON.stringify(resultat))
-            res.status(200).json(JSON.stringify(resultat));
+            console.log(resultat)
+            res.status(200).json(resultat);
         }).catch((error) => {
             console.error('Failed to return the record : ', error);
         });
