@@ -2,11 +2,15 @@ const http = require('http');
 const app = require('./app');
 const db = require('./config/config')
 
+// test de connection à la db
+
 db.authenticate().then(() => {
     console.log('Connection has been established successfully.');
  }).catch((error) => {
     console.error('Unable to connect to the database: ', error);
  });
+
+ // création du server
 
 const normalizePort = val => {
   const port = parseInt(val, 10);

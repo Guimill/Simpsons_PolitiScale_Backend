@@ -13,6 +13,8 @@ app.use((req, res, next) => {
     next();
   });
 
+// récupération des données des boutons de vote
+
 app.post('/:personnageName', (req, res, next) => {
     const personnageData = {
         name : req.body.name,
@@ -20,6 +22,8 @@ app.post('/:personnageName', (req, res, next) => {
     };
 
     console.log(personnageData);
+
+    // création des rows
 
         personnage.create({
             name: personnageData.name,
@@ -30,6 +34,8 @@ app.post('/:personnageName', (req, res, next) => {
             console.error('Failed to create a new record : ', error);
         });
   });
+
+  // récupération des données de la table "personnage" pour la production de statistiques
 
   app.get('/:personnageName', (req, res) => {
 

@@ -1,6 +1,8 @@
 const { DataTypes} = require("sequelize");
 const db = require('../config/config')
 
+//creation d'une table "personnage"
+
 const personnage = db.define("personnages", {
     name: {
       type: DataTypes.STRING,

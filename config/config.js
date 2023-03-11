@@ -1,3 +1,4 @@
+// connection à la db
 const Sequelize = require("sequelize");
 module.exports = new Sequelize(
     'cartoon',
