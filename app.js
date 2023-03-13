@@ -15,7 +15,7 @@ app.use((req, res, next) => {
 
 // récupération des données des boutons de vote
 
-app.post('/:personnageName', (req, res, next) => {
+app.post('/Vote/:personnageName', (req, res, next) => {
     const personnageData = {
         name : req.body.name,
         vote : req.body.vote
@@ -35,25 +35,43 @@ app.post('/:personnageName', (req, res, next) => {
         });
   });
 
-  // récupération des données de la table "personnage" pour la production de statistiques
+  // récupération des données de la table "personnage" pour la production de statistiques pour la partie vote
 
-  app.get('/:personnageName', (req, res) => {
+  app.get('/Vote/:personnageName', (req, res) => {
 
     const name = req.params.personnageName;
 
-       const personnages = personnage.findAll({
+    const personnagesVote = personnage.findAll({
             attributes: ["name", "vote"],
             where : {
                 name: name
             }
         });
 
-        personnages.then(resultat => {
+        personnagesVote.then(resultat => {
             console.log(resultat)
             res.status(200).json(resultat);
         }).catch((error) => {
             console.error('Failed to return the record : ', error);
         });
   });
+
+// récupération des données de la table "personnage" pour la production de statistiques pour la partie bilan
+
+app.get('/Bilan', (req, res) => {
+
+    const personnagesVote = personnage.findAll({
+            attributes: ["name", "vote"]
+        });
+
+        personnagesVote.then(resultat => {
+            console.log(resultat)
+            res.status(200).json(resultat);
+        }).catch((error) => {
+            console.error('Failed to return the record : ', error);
+        });
+  });
+
+
 
 module.exports = app;
