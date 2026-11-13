@@ -1,7 +1,7 @@
 {
   "name": "simpsons-politiscale-backend",
   "version": "2.0.0",
-  "description": "API de vote du Simpsons PolitiScale (Express + Sequelize/MariaDB)",
+  "description": "API de vote du Simpsons PolitiScale (Express + Sequelize/SQLite)",
   "main": "server.js",
   "private": true,
   "scripts": {
@@ -14,10 +14,7 @@
   "license": "ISC",
   "dependencies": {
     "express": "^5.3.0",
-    "mysql2": "^3.24.6",
-    "sequelize": "^6.37.8"
-  },
-  "devDependencies": {
+    "sequelize": "^6.37.8",
     "sqlite3": "^6.0.1"
   }
 }

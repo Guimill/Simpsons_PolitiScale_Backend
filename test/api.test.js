@@ -8,7 +8,7 @@ describe("API", () => {
   let server, base, db;
 
   before(async () => {
-    db = createDb({ DB_DIALECT: "sqlite" });
+    db = createDb({ DB_STORAGE: ":memory:" });
     const Vote = defineVote(db);
     await db.sync();
     server = createApp(Vote, { votesPerMinute: 5 }).listen(0, "127.0.0.1");
