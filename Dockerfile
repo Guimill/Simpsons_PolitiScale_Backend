@@ -1,5 +1,5 @@
-# Debian-based image: sqlite3 installs from prebuilt binaries
-FROM node:24-slim
+# Debian 13 image: the prebuilt sqlite3 binary needs glibc >= 2.38
+FROM node:24-trixie-slim
 ENV NODE_ENV=production DB_STORAGE=/data/politiscale.sqlite
 WORKDIR /app
 COPY package.json package-lock.json ./
