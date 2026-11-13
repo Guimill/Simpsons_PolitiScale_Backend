@@ -5,12 +5,16 @@ et renvoie les statistiques. Frontend : [Simpsons_PolitiScale_FrontEnd](https://
 
 ## API
 
+Chaque navigateur reçoit un identifiant anonyme (cookie `pv_id`, HttpOnly, renouvelé à chaque visite) :
+**un seul vote par personnage et par navigateur**, garanti par un index unique en base.
+
 | Méthode | Route | Réponse |
 |---|---|---|
 | `GET` | `/api/health` | `{ "status": "ok" }` |
 | `GET` | `/api/votes` | `[{ "name", "gauche", "droite", "total" }, …]` |
-| `GET` | `/api/votes/:name` | `{ "name", "gauche", "droite", "total" }` |
-| `POST` | `/api/votes/:name` avec `{ "vote": "Gauche" \| "Droite" }` | `201` + statistiques à jour |
+| `GET` | `/api/votes/:name` | `{ "name", "gauche", "droite", "total", "myVote" }` (`myVote` : `null` si pas encore voté) |
+| `GET` | `/api/my-votes` | `{ "Homer": "Gauche", … }` |
+| `POST` | `/api/votes/:name` avec `{ "vote": "Gauche" \| "Droite" }` | `201` + statistiques, ou `409` si déjà voté |
 
 ## Développement
 

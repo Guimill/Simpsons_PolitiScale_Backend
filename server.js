@@ -1,4 +1,4 @@
-const { createDb, defineVote } = require("./src/db");
+const { createDb, defineVote, migrate } = require("./src/db");
 const { createApp } = require("./src/app");
 
 const port = Number(process.env.PORT) || 3000;
@@ -8,7 +8,7 @@ async function main() {
   const Vote = defineVote(db);
   await db.authenticate();
   await db.query("PRAGMA journal_mode = WAL"); // lectures pendant les écritures
-  await db.sync(); // crée la table si elle n'existe pas
+  await migrate(db, Vote); // crée / met à jour la table
   console.log(`Base SQLite : ${db.options.storage}`);
 
   const server = createApp(Vote).listen(port, () => console.log(`API à l'écoute sur le port ${port}`));
