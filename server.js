@@ -1,58 +1,37 @@
-const http = require('http');
-const app = require('./app');
-const db = require('./config/config')
+const { createDb, defineVote } = require("./src/db");
+const { createApp } = require("./src/app");
 
-// test de connection à la db
+const port = Number(process.env.PORT) || 3000;
 
-db.authenticate().then(() => {
-    console.log('Connection has been established successfully.');
- }).catch((error) => {
-    console.error('Unable to connect to the database: ', error);
- });
-
- // création du server
-
-const normalizePort = val => {
-  const port = parseInt(val, 10);
-
-  if (isNaN(port)) {
-    return val;
+async function connect(db, attempts = 30) {
+  // Au démarrage du conteneur, la base peut ne pas être encore prête
+  for (let i = 1; ; i++) {
+    try {
+      await db.authenticate();
+      return;
+    } catch (error) {
+      if (i >= attempts) throw error;
+      console.warn(`Base de données indisponible (${error.message}), nouvel essai dans 2 s…`);
+      await new Promise((r) => setTimeout(r, 2000));
+    }
   }
-  if (port >= 0) {
-    return port;
-  }
-  return false;
-};
-const port = normalizePort(process.env.PORT || '3000');
-app.set('port', port);
+}
 
-const errorHandler = error => {
-  if (error.syscall !== 'listen') {
-    throw error;
-  }
-  const address = server.address();
-  const bind = typeof address === 'string' ? 'pipe ' + address : 'port: ' + port;
-  switch (error.code) {
-    case 'EACCES':
-      console.error(bind + ' requires elevated privileges.');
-      process.exit(1);
-      break;
-    case 'EADDRINUSE':
-      console.error(bind + ' is already in use.');
-      process.exit(1);
-      break;
-    default:
-      throw error;
-  }
-};
+async function main() {
+  const db = createDb();
+  const Vote = defineVote(db);
+  await connect(db);
+  await db.sync(); // crée la table si elle n'existe pas
+  console.log("Base de données connectée.");
 
-const server = http.createServer(app);
+  const server = createApp(Vote).listen(port, () => console.log(`API à l'écoute sur le port ${port}`));
 
-server.on('error', errorHandler);
-server.on('listening', () => {
-  const address = server.address();
-  const bind = typeof address === 'string' ? 'pipe ' + address : 'port ' + port;
-  console.log('Listening on ' + bind);
+  const stop = () => server.close(() => db.close().finally(() => process.exit(0)));
+  process.on("SIGTERM", stop);
+  process.on("SIGINT", stop);
+}
+
+main().catch((error) => {
+  console.error("Démarrage impossible :", error);
+  process.exit(1);
 });
-
-server.listen(port);

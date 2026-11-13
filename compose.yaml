@@ -1,0 +1,46 @@
+# Simpsons PolitiScale API + MariaDB.
+# The frontend (repo Simpsons_PolitiScale_FrontEnd) reaches the API as http://politiscale-api:3000
+# on the shared network "mynetwork". The database is only on the internal network.
+# DB_PASSWORD comes from the .env file next to this one (created by deploy/update.sh, never committed).
+name: politiscale-api
+
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: politiscale
+      MARIADB_USER: politiscale
+      MARIADB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
+    volumes:
+      - db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_NAME: politiscale
+      DB_USER: politiscale
+      DB_PASSWORD: ${DB_PASSWORD}
+    networks:
+      default:
+      mynetwork:
+        aliases: [politiscale-api]
+
+volumes:
+  db:   # votes, kept across updates
+
+networks:
+  mynetwork:
+    external: true
