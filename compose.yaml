@@ -1,12 +1,16 @@
 # Simpsons PolitiScale API (SQLite database in the "data" volume).
 # The frontend (repo Simpsons_PolitiScale_FrontEnd) reaches it as http://politiscale-api:3000
 # on the shared network "mynetwork".
+# ADMIN_PASSWORD (admin page /admin) comes from the .env file next to this one:
+# created with a random value by deploy/update.sh, never committed.
 name: politiscale-api
 
 services:
   api:
     build: .
     restart: unless-stopped
+    environment:
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     volumes:
       - data:/data   # politiscale.sqlite: the votes, kept across updates
     networks:

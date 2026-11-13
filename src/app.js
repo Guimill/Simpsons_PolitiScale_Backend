@@ -2,20 +2,21 @@ const crypto = require("node:crypto");
 const express = require("express");
 const { fn, col, literal, UniqueConstraintError } = require("sequelize");
 const { VOTES } = require("./db");
+const { adminRouter } = require("./admin");
 
 const NAME_RE = /^[\p{L}\p{N} '._-]{1,64}$/u;
 const VOTER_COOKIE = "pv_id";
 const VOTER_RE = /^[0-9a-f-]{36}$/;
 const MAX_AGE = 400 * 24 * 3600; // longest lifetime browsers accept; renewed on every visit
 
-// Limite simple en mémoire : N votes par minute et par adresse IP
-function rateLimit({ max, windowMs }) {
+// Limite simple en mémoire : N requêtes par minute et par adresse IP
+function rateLimit({ max, windowMs, message = "Trop de votes, réessayez dans une minute." }) {
   const hits = new Map();
   setInterval(() => hits.clear(), windowMs).unref();
   return (req, res, next) => {
     const n = (hits.get(req.ip) || 0) + 1;
     hits.set(req.ip, n);
-    if (n > max) return res.status(429).json({ error: "Trop de votes, réessayez dans une minute." });
+    if (n > max) return res.status(429).json({ error: message });
     next();
   };
 }
@@ -38,7 +39,10 @@ function toStats(row) {
   return { name: row.name, gauche, droite: total - gauche, total };
 }
 
-function createApp(Vote, { corsOrigin = process.env.CORS_ORIGIN, votesPerMinute = 30 } = {}) {
+function createApp(
+  Vote,
+  { corsOrigin = process.env.CORS_ORIGIN, votesPerMinute = 30, adminPassword = process.env.ADMIN_PASSWORD } = {}
+) {
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", true); // derrière nginx / Nginx Proxy Manager
@@ -49,8 +53,8 @@ function createApp(Vote, { corsOrigin = process.env.CORS_ORIGIN, votesPerMinute 
     app.use((req, res, next) => {
       res.setHeader("Access-Control-Allow-Origin", corsOrigin);
       res.setHeader("Access-Control-Allow-Credentials", "true");
-      res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-      res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
       if (req.method === "OPTIONS") return res.sendStatus(204);
       next();
     });
@@ -74,15 +78,13 @@ function createApp(Vote, { corsOrigin = process.env.CORS_ORIGIN, votesPerMinute 
     return toStats(row || { name });
   };
 
-  const myVote = async (req, name) => {
-    const row = await Vote.findOne({ attributes: ["vote"], where: { name, voterId: req.voterId }, raw: true });
-    return row ? row.vote : null;
-  };
-
   const checkName = (req, res, next) => {
     if (!NAME_RE.test(req.params.name)) return res.status(400).json({ error: "Nom de personnage invalide." });
     next();
   };
+
+  // Administration (mot de passe ADMIN_PASSWORD), avant le cookie des votants
+  app.use("/api/admin", adminRouter(Vote, { password: adminPassword, statsQuery, toStats, checkName }));
 
   const router = express.Router();
 
@@ -104,26 +106,32 @@ function createApp(Vote, { corsOrigin = process.env.CORS_ORIGIN, votesPerMinute 
   // Statistiques d'un personnage + mon vote (null si je n'ai pas voté)
   router.get("/votes/:name", checkName, async (req, res) => {
     const { name } = req.params;
-    res.json({ ...(await statsFor(name)), myVote: await myVote(req, name) });
+    const mine = await Vote.findOne({ attributes: ["vote"], where: { name, voterId: req.voterId }, raw: true });
+    res.json({ ...(await statsFor(name)), myVote: mine ? mine.vote : null });
   });
 
-  // Vote { "vote": "Gauche" | "Droite" } : un seul vote par personnage et par navigateur.
-  // 201 + statistiques à jour, ou 409 si déjà voté (avec le vote existant).
+  // Vote { "vote": "Gauche" | "Droite" } : un seul vote par personnage et par navigateur,
+  // que l'on peut changer autant de fois qu'on veut.
+  // 201 (premier vote) ou 200 (vote modifié / inchangé) + statistiques à jour.
   router.post("/votes/:name", rateLimit({ max: votesPerMinute, windowMs: 60_000 }), checkName, async (req, res) => {
     const { name } = req.params;
     const vote = req.body && req.body.vote;
     if (!VOTES.includes(vote)) return res.status(400).json({ error: `Vote attendu : ${VOTES.join(" ou ")}.` });
-    try {
-      await Vote.create({ name, vote, voterId: req.voterId });
-    } catch (error) {
-      if (!(error instanceof UniqueConstraintError)) throw error;
-      return res.status(409).json({
-        error: "Vous avez déjà voté pour ce personnage.",
-        ...(await statsFor(name)),
-        myVote: await myVote(req, name),
-      });
+
+    const where = { name, voterId: req.voterId };
+    let status = 200;
+    const [updated] = await Vote.update({ vote }, { where });
+    if (updated === 0) {
+      try {
+        await Vote.create({ ...where, vote });
+        status = 201;
+      } catch (error) {
+        // deux requêtes simultanées du même navigateur : l'autre vient de créer la ligne
+        if (!(error instanceof UniqueConstraintError)) throw error;
+        await Vote.update({ vote }, { where });
+      }
     }
-    res.status(201).json({ ...(await statsFor(name)), myVote: vote });
+    res.status(status).json({ ...(await statsFor(name)), myVote: vote });
   });
 
   app.use("/api", router);
